@@ -7,13 +7,62 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
-  }
   public: {
     Tables: {
+      admin_config: {
+        Row: {
+          id: string
+          config_key: string
+          config_value: Json
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          config_key: string
+          config_value: Json
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          config_key?: string
+          config_value?: Json
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_instructions: {
+        Row: {
+          id: string
+          instruction: string
+          processed: boolean
+          config_updates: Json | null
+          created_at: string
+          processed_at: string | null
+        }
+        Insert: {
+          id?: string
+          instruction: string
+          processed?: boolean
+          config_updates?: Json | null
+          created_at?: string
+          processed_at?: string | null
+        }
+        Update: {
+          id?: string
+          instruction?: string
+          processed?: boolean
+          config_updates?: Json | null
+          created_at?: string
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       classrooms: {
         Row: {
           capacity: number
@@ -116,6 +165,8 @@ export type Database = {
           department_id: string
           id: string
           name: string
+          is_lab: boolean | null
+          lab_hours: number | null
         }
         Insert: {
           code: string
@@ -124,6 +175,8 @@ export type Database = {
           department_id: string
           id?: string
           name: string
+          is_lab?: boolean | null
+          lab_hours?: number | null
         }
         Update: {
           code?: string
@@ -132,6 +185,8 @@ export type Database = {
           department_id?: string
           id?: string
           name?: string
+          is_lab?: boolean | null
+          lab_hours?: number | null
         }
         Relationships: [
           {
@@ -153,6 +208,8 @@ export type Database = {
           staff_id: string
           subject_id: string
           time_slot: string
+          is_lab_session: boolean | null
+          staff_count: number | null
         }
         Insert: {
           classroom_id: string
@@ -163,6 +220,8 @@ export type Database = {
           staff_id: string
           subject_id: string
           time_slot: string
+          is_lab_session?: boolean | null
+          staff_count?: number | null
         }
         Update: {
           classroom_id?: string
@@ -173,6 +232,8 @@ export type Database = {
           staff_id?: string
           subject_id?: string
           time_slot?: string
+          is_lab_session?: boolean | null
+          staff_count?: number | null
         }
         Relationships: [
           {

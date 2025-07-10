@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,9 +5,13 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
-import { Calendar, Zap, Download, ArrowLeft } from 'lucide-react';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { Calendar, Zap, Download, ArrowLeft, Brain, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '../hooks/use-toast';
+import { enhancedTimetableGenerator, TimetableEntry } from '../lib/enhanced-timetable-generator';
+import { aiService } from '../lib/ai-services';
 
 interface Department {
   id: string;
@@ -21,6 +24,7 @@ interface Subject {
   name: string;
   code: string;
   credits: number;
+  is_lab: boolean;
 }
 
 interface Staff {
@@ -36,16 +40,6 @@ interface Classroom {
   capacity: number;
 }
 
-interface TimetableEntry {
-  id?: string;
-  day: string;
-  time_slot: string;
-  subject_id: string;
-  staff_id: string;
-  classroom_id: string;
-  department_id: string;
-}
-
 const TimetableGenerator = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -57,6 +51,8 @@ const TimetableGenerator = () => {
   const [generatedTimetable, setGeneratedTimetable] = useState<TimetableEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [aiInstructions, setAiInstructions] = useState('');
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const timeSlots = ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '14:00-15:00', '15:00-16:00', '16:00-17:00'];
@@ -101,7 +97,7 @@ const TimetableGenerator = () => {
     try {
       setLoading(true);
 
-      // Fetch subjects
+      // Fetch subjects with lab information
       const { data: subjectData, error: subjectError } = await supabase
         .from('subjects')
         .select('*')
@@ -148,89 +144,31 @@ const TimetableGenerator = () => {
     setIsGenerating(true);
     
     try {
-      // Simple AI-like timetable generation logic
-      const newTimetable: TimetableEntry[] = [];
-      const usedSlots = new Set<string>();
-      const staffWorkload = new Map<string, number>();
-      
-      // Initialize staff workload tracking
-      staff.forEach(s => staffWorkload.set(s.id, 0));
-
-      for (const subject of subjects) {
-        // Find available staff for this subject
-        const availableStaff = staff.filter(s => {
-          const selectedSubjects = s.subjects_selected ? JSON.parse(s.subjects_selected) : [];
-          return selectedSubjects.includes(subject.id) || selectedSubjects.length === 0;
-        });
-
-        if (availableStaff.length === 0) continue;
-
-        // Calculate classes needed based on credits
-        const classesNeeded = Math.max(subject.credits, 1);
-
-        for (let i = 0; i < classesNeeded; i++) {
-          // Find available time slot
-          let slotFound = false;
-          
-          for (const day of daysOfWeek) {
-            if (slotFound) break;
-            
-            for (const timeSlot of timeSlots) {
-              const slotKey = `${day}-${timeSlot}`;
-              
-              if (usedSlots.has(slotKey)) continue;
-
-              // Find staff with least workload
-              const selectedStaff = availableStaff.reduce((prev, current) => {
-                const prevWorkload = staffWorkload.get(prev.id) || 0;
-                const currentWorkload = staffWorkload.get(current.id) || 0;
-                return currentWorkload < prevWorkload ? current : prev;
-              });
-
-              // Check if staff is already assigned at this time
-              const staffConflict = newTimetable.some(entry => 
-                entry.staff_id === selectedStaff.id && 
-                entry.day === day && 
-                entry.time_slot === timeSlot
-              );
-
-              if (staffConflict) continue;
-
-              // Find available classroom
-              const availableClassroom = classrooms.find(classroom => {
-                return !newTimetable.some(entry => 
-                  entry.classroom_id === classroom.id && 
-                  entry.day === day && 
-                  entry.time_slot === timeSlot
-                );
-              });
-
-              if (!availableClassroom) continue;
-
-              // Add to timetable
-              newTimetable.push({
-                day,
-                time_slot: timeSlot,
-                subject_id: subject.id,
-                staff_id: selectedStaff.id,
-                classroom_id: availableClassroom.id,
-                department_id: selectedDepartment,
-              });
-
-              // Update workload
-              staffWorkload.set(selectedStaff.id, (staffWorkload.get(selectedStaff.id) || 0) + 1);
-              usedSlots.add(slotKey);
-              slotFound = true;
-              break;
-            }
-          }
-        }
+      // Process AI instructions if provided
+      if (aiInstructions.trim()) {
+        await aiService.processNaturalLanguageInstruction(aiInstructions);
       }
 
-      setGeneratedTimetable(newTimetable);
+      // Generate timetable using enhanced AI generator
+      const timetable = await enhancedTimetableGenerator.generateTimetable(selectedDepartment);
+      setGeneratedTimetable(timetable);
+
+      // Generate explanations for key decisions
+      const newExplanations: Record<string, string> = {};
+      for (const entry of timetable.slice(0, 5)) { // Explain first 5 entries
+        const key = `${entry.day}-${entry.time_slot}-${entry.subject_id}`;
+        try {
+          const explanation = await aiService.explainDecision(entry);
+          newExplanations[key] = explanation;
+        } catch (error) {
+          console.error('Error generating explanation:', error);
+        }
+      }
+      setExplanations(newExplanations);
+
       toast({
         title: "Success",
-        description: `Generated timetable with ${newTimetable.length} classes`,
+        description: `Generated AI-optimized timetable with ${timetable.length} classes`,
       });
     } catch (error) {
       console.error('Error generating timetable:', error);
@@ -246,19 +184,7 @@ const TimetableGenerator = () => {
 
   const saveTimetable = async () => {
     try {
-      // Delete existing timetable for this department
-      await supabase
-        .from('timetables')
-        .delete()
-        .eq('department_id', selectedDepartment);
-
-      // Insert new timetable
-      const { error } = await supabase
-        .from('timetables')
-        .insert(generatedTimetable);
-
-      if (error) throw error;
-
+      await enhancedTimetableGenerator.saveTimetable(selectedDepartment, generatedTimetable);
       toast({
         title: "Success",
         description: "Timetable saved successfully!",
@@ -271,6 +197,31 @@ const TimetableGenerator = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const exportTimetable = () => {
+    // Create CSV content
+    const headers = ['Day', 'Time Slot', 'Subject', 'Staff', 'Classroom', 'Type'];
+    const csvContent = [
+      headers.join(','),
+      ...generatedTimetable.map(entry => [
+        entry.day,
+        entry.time_slot,
+        getSubjectName(entry.subject_id),
+        getStaffName(entry.staff_id),
+        getClassroomName(entry.classroom_id),
+        entry.is_lab_session ? 'Lab' : 'Theory'
+      ].join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `timetable-${selectedDepartment}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const getSubjectName = (subjectId: string) => {
@@ -309,7 +260,7 @@ const TimetableGenerator = () => {
             <Calendar className="h-8 w-8 text-blue-600" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">AI Timetable Generator</h1>
-              <p className="text-sm text-gray-600">Generate optimized class schedules</p>
+              <p className="text-sm text-gray-600">Generate optimized class schedules with AI</p>
             </div>
           </div>
         </div>
@@ -317,56 +268,78 @@ const TimetableGenerator = () => {
 
       <div className="container mx-auto px-4 py-8">
         {/* Controls */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Generate Timetable</CardTitle>
-            <CardDescription>Select department and generate AI-optimized timetable</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2">Department</label>
-                <Select 
-                  value={selectedDepartment} 
-                  onValueChange={setSelectedDepartment}
-                  disabled={user?.role === 'dept_admin'}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name} ({dept.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Department Selection</CardTitle>
+              <CardDescription>Select department and configure generation</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="department">Department</Label>
+                  <Select 
+                    value={selectedDepartment} 
+                    onValueChange={setSelectedDepartment}
+                    disabled={user?.role === 'dept_admin'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.name} ({dept.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={generateTimetable}
+                    disabled={!selectedDepartment || isGenerating}
+                    className="bg-blue-600 hover:bg-blue-700 flex-1"
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    {isGenerating ? 'Generating...' : 'Generate AI Timetable'}
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={generateTimetable}
-                  disabled={!selectedDepartment || isGenerating}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  {isGenerating ? 'Generating...' : 'Generate'}
-                </Button>
-                {generatedTimetable.length > 0 && (
-                  <>
-                    <Button onClick={saveTimetable} variant="outline">
-                      Save Timetable
-                    </Button>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Export
-                    </Button>
-                  </>
-                )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                AI Instructions
+              </CardTitle>
+              <CardDescription>
+                Provide natural language instructions for timetable generation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="e.g., 'Schedule all lab sessions in the morning' or 'Avoid back-to-back classes for the same staff'"
+                  value={aiInstructions}
+                  onChange={(e) => setAiInstructions(e.target.value)}
+                  rows={4}
+                />
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium mb-1">Example instructions:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Allocate 2 staff members for every lab session</li>
+                    <li>Avoid scheduling labs on Friday afternoons</li>
+                    <li>Distribute workload evenly among staff</li>
+                    <li>Schedule theory classes before lab sessions</li>
+                  </ul>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Stats */}
         {selectedDepartment && (
@@ -398,12 +371,49 @@ const TimetableGenerator = () => {
           </div>
         )}
 
+        {/* AI Explanations */}
+        {Object.keys(explanations).length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                AI Decision Explanations
+              </CardTitle>
+              <CardDescription>
+                Understanding why certain scheduling decisions were made
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Object.entries(explanations).map(([key, explanation]) => (
+                  <div key={key} className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">{explanation}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Generated Timetable */}
         {generatedTimetable.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Generated Timetable</CardTitle>
-              <CardDescription>AI-optimized class schedule</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Generated AI Timetable</CardTitle>
+                  <CardDescription>AI-optimized class schedule with conflict resolution</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={saveTimetable} variant="outline">
+                    Save Timetable
+                  </Button>
+                  <Button onClick={exportTimetable} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -432,12 +442,21 @@ const TimetableGenerator = () => {
                             <td key={`${day}-${timeSlot}`} className="border border-gray-300 p-3">
                               {entry ? (
                                 <div className="space-y-1">
-                                  <Badge variant="default" className="text-xs">
+                                  <Badge 
+                                    variant={entry.is_lab_session ? "destructive" : "default"} 
+                                    className="text-xs"
+                                  >
                                     {getSubjectName(entry.subject_id)}
+                                    {entry.is_lab_session && ' (Lab)'}
                                   </Badge>
                                   <div className="text-xs text-gray-600">
                                     <div>{getStaffName(entry.staff_id)}</div>
                                     <div>{getClassroomName(entry.classroom_id)}</div>
+                                    {entry.staff_count > 1 && (
+                                      <div className="text-blue-600">
+                                        {entry.staff_count} staff
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ) : (

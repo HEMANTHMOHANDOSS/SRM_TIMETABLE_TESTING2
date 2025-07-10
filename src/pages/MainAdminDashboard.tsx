@@ -1,12 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Users, Building2, BookOpen, Calendar, LogOut, Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Users, Building2, BookOpen, Calendar, LogOut, Plus, Settings, Brain } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+import { AdminConfigPanel } from '../components/AdminConfigPanel';
 
 interface Department {
   id: string;
@@ -175,100 +176,205 @@ const MainAdminDashboard = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Departments */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Departments</CardTitle>
-                  <CardDescription>Manage academic departments</CardDescription>
-                </div>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Department
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {departments.map((dept) => (
-                  <div key={dept.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">{dept.name}</h3>
-                      <p className="text-sm text-gray-600">Code: {dept.code}</p>
-                    </div>
-                    <Badge variant="secondary">{dept.code}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="departments">Departments</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="config">AI Configuration</TabsTrigger>
+          </TabsList>
 
-          {/* Users */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>System Users</CardTitle>
-                  <CardDescription>Manage user accounts and roles</CardDescription>
-                </div>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add User
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Departments */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium">{user.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {user.departments?.name || 'No Department'}
-                      </p>
+                      <CardTitle>Recent Departments</CardTitle>
+                      <CardDescription>Latest department additions</CardDescription>
                     </div>
-                    <Badge 
-                      variant={
-                        user.role === 'main_admin' ? 'default' :
-                        user.role === 'dept_admin' ? 'secondary' : 'outline'
-                      }
-                    >
-                      {user.role.replace('_', ' ').toUpperCase()}
-                    </Badge>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Department
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {departments.slice(0, 5).map((dept) => (
+                      <div key={dept.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <h3 className="font-medium">{dept.name}</h3>
+                          <p className="text-sm text-gray-600">Code: {dept.code}</p>
+                        </div>
+                        <Badge variant="secondary">{dept.code}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button className="h-20 flex flex-col">
-                  <Building2 className="h-6 w-6 mb-2" />
-                  Manage Departments
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <Users className="h-6 w-6 mb-2" />
-                  User Management
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <Calendar className="h-6 w-6 mb-2" />
-                  System Reports
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              {/* Users */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Recent Users</CardTitle>
+                      <CardDescription>Latest user registrations</CardDescription>
+                    </div>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add User
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {users.slice(0, 5).map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <h3 className="font-medium">{user.name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {user.departments?.name || 'No Department'}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={
+                            user.role === 'main_admin' ? 'default' :
+                            user.role === 'dept_admin' ? 'secondary' : 'outline'
+                          }
+                        >
+                          {user.role.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Common administrative tasks</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Button className="h-20 flex flex-col">
+                    <Building2 className="h-6 w-6 mb-2" />
+                    Manage Departments
+                  </Button>
+                  <Button variant="outline" className="h-20 flex flex-col">
+                    <Users className="h-6 w-6 mb-2" />
+                    User Management
+                  </Button>
+                  <Button variant="outline" className="h-20 flex flex-col">
+                    <Settings className="h-6 w-6 mb-2" />
+                    System Settings
+                  </Button>
+                  <Button variant="outline" className="h-20 flex flex-col">
+                    <Calendar className="h-6 w-6 mb-2" />
+                    System Reports
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="departments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>All Departments</CardTitle>
+                    <CardDescription>Manage academic departments</CardDescription>
+                  </div>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Department
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {departments.map((dept) => (
+                    <Card key={dept.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium">{dept.name}</h3>
+                          <Badge variant="outline">{dept.code}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Created: {new Date(dept.created_at).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>All Users</CardTitle>
+                    <CardDescription>Manage user accounts and roles</CardDescription>
+                  </div>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {users.map((user) => (
+                    <Card key={user.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium">{user.name}</h3>
+                          <Badge 
+                            variant={
+                              user.role === 'main_admin' ? 'default' :
+                              user.role === 'dept_admin' ? 'secondary' : 'outline'
+                            }
+                          >
+                            {user.role.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {user.departments?.name || 'No Department'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="config" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  AI-Powered Timetable Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure timetable generation constraints and use natural language instructions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminConfigPanel />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

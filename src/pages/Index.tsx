@@ -1,14 +1,20 @@
-import { supabase } from '@/integrations/supabase/client'; // adjust path if needed
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { GraduationCap, Users, Calendar, Zap, Shield, Database } from 'lucide-react';
+import { GraduationCap, Users, Calendar, Zap, Shield, Database, Brain } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+}
 
 const Index = () => {
   const { isAuthenticated, user } = useAuth();
-const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
 
   useEffect(() => {
@@ -28,7 +34,6 @@ const [departments, setDepartments] = useState<Department[]>([]);
 
     fetchDepartments();
   }, []);
-
 
   // Redirect authenticated users to their appropriate dashboard
   if (isAuthenticated && user) {
@@ -92,41 +97,41 @@ const [departments, setDepartments] = useState<Department[]>([]);
       <section className="py-16 px-4 bg-white">
         <div className="container mx-auto">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Powerful Features
+            Powerful AI Features
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
-                <Zap className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                <CardTitle>AI-Powered Generation</CardTitle>
+                <Brain className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                <CardTitle>Gemini Pro Integration</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Advanced algorithms automatically generate optimized timetables with conflict resolution
+                  Natural language processing for intuitive timetable configuration and intelligent decision making
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
-                <Users className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <CardTitle>Multi-Role Management</CardTitle>
+                <Zap className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                <CardTitle>Groq Ultra-Fast AI</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Separate dashboards for Main Admins, Department Admins, and Staff with role-based permissions
+                  Lightning-fast conflict detection and real-time timetable optimization with detailed explanations
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
-                <Database className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <CardTitle>Department Workspaces</CardTitle>
+                <Users className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                <CardTitle>Smart Configuration</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Isolated department environments with dedicated staff, subjects, and classroom management
+                  Dynamic constraint management with natural language instructions and automated policy updates
                 </CardDescription>
               </CardContent>
             </Card>
@@ -134,11 +139,11 @@ const [departments, setDepartments] = useState<Department[]>([]);
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
                 <Calendar className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                <CardTitle>Smart Scheduling</CardTitle>
+                <CardTitle>Intelligent Scheduling</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Intelligent conflict detection, availability checking, and automated timetable optimization
+                  AI-powered conflict resolution, workload balancing, and automated lab session management
                 </CardDescription>
               </CardContent>
             </Card>
@@ -146,23 +151,23 @@ const [departments, setDepartments] = useState<Department[]>([]);
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
                 <Shield className="h-12 w-12 text-red-600 mx-auto mb-4" />
-                <CardTitle>Secure Authentication</CardTitle>
+                <CardTitle>Secure & Scalable</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  JWT-based security with @srmist.edu.in email validation and CSRF protection
+                  Enterprise-grade security with Supabase authentication and role-based access control
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
-                <GraduationCap className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
-                <CardTitle>Export & Integration</CardTitle>
+                <Database className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
+                <CardTitle>Export & Analytics</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Export timetables to Excel, integrate with existing systems, and real-time updates
+                  Comprehensive export options (CSV, PDF) with detailed analytics and performance insights
                 </CardDescription>
               </CardContent>
             </Card>
@@ -170,8 +175,8 @@ const [departments, setDepartments] = useState<Department[]>([]);
         </div>
       </section>
 
-      {/* 🔽 Add this department section where you want to show departments */}
-      <section className="py-16 px-4 bg-white">
+      {/* Departments Section */}
+      <section className="py-16 px-4 bg-gray-50">
         <div className="container mx-auto">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
             Available Departments
@@ -179,59 +184,63 @@ const [departments, setDepartments] = useState<Department[]>([]);
           {loadingDepts ? (
             <p className="text-center text-gray-500">Loading departments...</p>
           ) : (
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {departments.map((dept) => (
-                <li key={dept.id} className="bg-gray-100 p-4 rounded-lg shadow">
-                  <h3 className="text-xl font-semibold text-gray-800">{dept.name}</h3>
-                  <p className="text-gray-600">Code: {dept.code}</p>
-                </li>
+                <Card key={dept.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{dept.name}</h3>
+                    <p className="text-gray-600">Code: {dept.code}</p>
+                  </CardContent>
+                </Card>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </section>
 
-      {/* System Architecture */}
-      <section className="py-16 px-4 bg-gray-50">
+      {/* AI Technology Stack */}
+      <section className="py-16 px-4 bg-white">
         <div className="container mx-auto">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            System Architecture
+            Advanced AI Technology Stack
           </h2>
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <h3 className="text-2xl font-semibold mb-4">Technology Stack</h3>
+              <h3 className="text-2xl font-semibold mb-4">Cutting-Edge AI Integration</h3>
               <ul className="space-y-3">
                 <li className="flex items-center">
                   <div className="w-3 h-3 bg-blue-600 rounded-full mr-3"></div>
-                  <span><strong>Frontend:</strong> React/Next.js with TypeScript</span>
+                  <span><strong>Gemini Pro:</strong> Natural language understanding for configuration</span>
                 </li>
                 <li className="flex items-center">
                   <div className="w-3 h-3 bg-green-600 rounded-full mr-3"></div>
-                  <span><strong>Backend:</strong> Flask (Python) REST API</span>
+                  <span><strong>Groq API:</strong> Ultra-fast reasoning and conflict detection</span>
                 </li>
                 <li className="flex items-center">
                   <div className="w-3 h-3 bg-purple-600 rounded-full mr-3"></div>
-                  <span><strong>Database:</strong> SQLite with proper relationships</span>
+                  <span><strong>React + TypeScript:</strong> Modern, type-safe frontend</span>
                 </li>
                 <li className="flex items-center">
                   <div className="w-3 h-3 bg-orange-600 rounded-full mr-3"></div>
-                  <span><strong>AI Engine:</strong> Custom Python algorithms</span>
+                  <span><strong>Supabase:</strong> Real-time database and authentication</span>
                 </li>
                 <li className="flex items-center">
                   <div className="w-3 h-3 bg-red-600 rounded-full mr-3"></div>
-                  <span><strong>Security:</strong> JWT + CSRF protection</span>
+                  <span><strong>AI Optimization:</strong> Constraint satisfaction algorithms</span>
                 </li>
               </ul>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h3 className="text-xl font-semibold mb-4">Key Benefits</h3>
-              <ul className="space-y-2 text-gray-600">
-                <li>✅ Automated conflict resolution</li>
-                <li>✅ Real-time timetable generation</li>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6 rounded-lg">
+              <h3 className="text-xl font-semibold mb-4">AI-Powered Benefits</h3>
+              <ul className="space-y-2 text-gray-700">
+                <li>✅ Natural language configuration</li>
+                <li>✅ Real-time conflict detection</li>
+                <li>✅ Intelligent workload distribution</li>
+                <li>✅ Automated lab session management</li>
+                <li>✅ Dynamic constraint adaptation</li>
+                <li>✅ Explainable AI decisions</li>
                 <li>✅ Multi-department isolation</li>
-                <li>✅ Role-based access control</li>
-                <li>✅ Excel export capabilities</li>
-                <li>✅ Scalable architecture</li>
+                <li>✅ Mobile-responsive design</li>
               </ul>
             </div>
           </div>
@@ -247,6 +256,9 @@ const [departments, setDepartments] = useState<Department[]>([]);
           </div>
           <p className="text-gray-400">
             © 2024 SRM College Ramapuram. All rights reserved.
+          </p>
+          <p className="text-gray-500 text-sm mt-2">
+            Powered by Gemini Pro, Groq AI, and Supabase
           </p>
         </div>
       </footer>
